@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- The only place the app connects to, apart from its own files, is the Claude API to read labels. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; worker-src 'self'; connect-src 'self' https://api.anthropic.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Kitchen</title>
+  <meta name="app-version" content="kitchen-v1">
+  <meta name="description" content="Photograph and catalogue what's in your fridge, freezer and cupboards, and use it before it expires.">
+  <meta name="theme-color" content="#f4f6f3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1210" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Kitchen">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <main id="app">
+    <header class="top">
+      <div class="title-row">
+        <button id="kitchen-btn" class="kitchen-btn" type="button" aria-haspopup="dialog">
+          <h1 id="kitchen-title">Kitchen Inventory</h1>
+          <svg id="kitchen-caret" class="caret" viewBox="0 0 24 24" hidden><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <button id="settings-btn" class="btn icon ghost" type="button" aria-label="Settings">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+      </div>
+      <p class="subline"><span id="summary-line"></span> <span class="app-version"></span> <span class="update-status"></span></p>
+      <p id="friend-note" class="friend-note" hidden></p>
+
+      <button id="soon-banner" class="soon-banner" type="button" hidden></button>
+
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search" autocomplete="off" enterkeyhint="search">
+        <select id="sort" aria-label="Sort by">
+          <option value="name">A–Z</option>
+          <option value="expiry">Expiry date</option>
+          <option value="location">Location</option>
+          <option value="type">Type</option>
+          <option value="left">Amount left</option>
+          <option value="added">Recently added</option>
+        </select>
+      </div>
+      <div class="toolbar">
+        <select id="filter-location" aria-label="Location"></select>
+        <select id="filter-type" aria-label="Type"></select>
+      </div>
+    </header>
+
+    <section id="list" class="list" aria-live="polite"></section>
+    <div id="empty" class="empty" hidden></div>
+
+    <div class="fab-row" id="fab-row">
+      <button id="type-btn" class="btn fab secondary" type="button">Type it in</button>
+      <button id="add-btn" class="btn primary fab" type="button">
+        <svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Add item
+      </button>
+    </div>
+  </main>
+
+  <input id="camera-input" type="file" accept="image/*" capture="environment" hidden>
+  <input id="library-input" type="file" accept="image/*" hidden>
+  <input id="import-input" type="file" accept="application/json,.json" hidden>
+
+  <!-- Add / edit an item -->
+  <dialog id="editor" class="sheet">
+    <form id="item-form" method="dialog" autocomplete="off">
+      <div class="sheet-head">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <h2 id="editor-title">New item</h2>
+        <button type="submit" class="btn ghost strong" id="save-btn">Save</button>
+      </div>
+      <div class="sheet-body">
+        <div class="photo-box">
+          <img id="photo-preview" alt="Label photo" hidden>
+          <div id="photo-empty" class="photo-empty">No photo</div>
+          <div class="photo-actions">
+            <button type="button" class="btn small" id="retake-btn">Take photo</button>
+            <button type="button" class="btn small" id="library-btn">Choose photo</button>
+            <button type="button" class="btn small" id="read-btn" hidden>Read label</button>
+          </div>
+          <p id="ai-status" class="ai-status" hidden></p>
+        </div>
+
+        <label>Name <input id="f-name" required maxlength="80" placeholder="e.g. Greek yoghurt"></label>
+        <label>Brand / shop <input id="f-brand" maxlength="60"></label>
+        <div class="two">
+          <label>Type <select id="f-type"></select></label>
+          <label>Location <select id="f-location"></select></label>
+        </div>
+        <div class="two">
+          <label>Quantity <input id="f-quantity" inputmode="decimal" maxlength="12" placeholder="e.g. 500"></label>
+          <label>Unit
+            <select id="f-unit">
+              <option value=""></option><option>pcs</option><option>pack</option><option>g</option><option>kg</option>
+              <option>ml</option><option>L</option><option>tin</option><option>jar</option><option>bottle</option><option>bag</option>
+            </select>
+          </label>
+        </div>
+
+        <fieldset class="left-box">
+          <legend>How much is left? <output id="left-out">100%</output></legend>
+          <input id="f-left" type="range" min="0" max="100" step="5" value="100">
+          <div class="quick">
+            <button type="button" class="chip" data-left="100">Full</button>
+            <button type="button" class="chip" data-left="75">¾</button>
+            <button type="button" class="chip" data-left="50">½</button>
+            <button type="button" class="chip" data-left="25">¼</button>
+            <button type="button" class="chip" data-left="10">Nearly gone</button>
+          </div>
+        </fieldset>
+
+        <div class="two">
+          <label>Expiry date <input id="f-expiry" type="date"></label>
+          <label>Kind
+            <select id="f-expiry-kind">
+              <option value="">—</option><option value="use_by">Use by</option><option value="best_before">Best before</option>
+            </select>
+          </label>
+        </div>
+        <label>Opened on <input id="f-opened" type="date"></label>
+        <label>Notes <textarea id="f-notes" rows="2" maxlength="300" placeholder="e.g. Once opened, use within 3 days"></textarea></label>
+
+        <div id="finish-row" class="finish-row" hidden>
+          <button type="button" class="btn" id="used-btn">Used it up</button>
+          <button type="button" class="btn warn" id="binned-btn">Threw it away</button>
+        </div>
+        <button type="button" class="btn ghost danger-text block" id="delete-btn" hidden>Delete (added by mistake)</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- A shared item, read-only -->
+  <dialog id="viewer" class="sheet">
+    <div class="sheet-head">
+      <span></span>
+      <h2 id="viewer-title"></h2>
+      <button type="button" class="btn ghost strong" data-close>Done</button>
+    </div>
+    <div class="sheet-body" id="viewer-body"></div>
+  </dialog>
+
+  <!-- Pick which kitchen to look at -->
+  <dialog id="kitchens" class="sheet">
+    <div class="sheet-head">
+      <span></span>
+      <h2>Kitchens</h2>
+      <button type="button" class="btn ghost strong" data-close>Done</button>
+    </div>
+    <div class="sheet-body">
+      <div id="kitchen-list" class="kitchen-list"></div>
+      <p class="hint">Friends' kitchens are a snapshot from when they shared them. Ask them to share again for the latest.</p>
+      <button type="button" class="btn block" id="kitchens-import-btn">Add a friend's kitchen file…</button>
+    </div>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog id="settings" class="sheet">
+    <div class="sheet-head">
+      <span></span>
+      <h2>Settings</h2>
+      <button type="button" class="btn ghost strong" data-close>Done</button>
+    </div>
+    <div class="sheet-body">
+      <h3>Your kitchen</h3>
+      <label>Your name <input id="s-owner" maxlength="30" placeholder="e.g. JG"></label>
+      <label>Kitchen name <input id="s-name" maxlength="50" placeholder="e.g. JG's Kitchen Inventory"></label>
+      <p id="tally" class="hint"></p>
+
+      <h3>Share &amp; export</h3>
+      <div class="stack">
+        <button type="button" class="btn block" id="share-btn">Share my kitchen with a friend</button>
+        <button type="button" class="btn block" id="text-btn">Send the list as a message</button>
+        <button type="button" class="btn block" id="csv-btn">Export a spreadsheet (CSV)</button>
+        <button type="button" class="btn block" id="import-btn">Open a kitchen file…</button>
+      </div>
+      <p class="hint">Sharing sends a small <em>.kitchen</em> file (WhatsApp, email, AirDrop…). Your friend saves it, then in their Kitchen app taps <strong>Open a kitchen file</strong> to see your kitchen.</p>
+
+      <h3>Backup</h3>
+      <button type="button" class="btn block" id="backup-btn">Save a full backup</button>
+      <p id="backup-status" class="hint"></p>
+
+      <h3>Reading labels with Claude</h3>
+      <label class="switch"><input type="checkbox" id="s-auto-read"> Read the label as soon as I take a photo</label>
+      <label>Claude API key <input id="s-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+      <label>Model <select id="s-model"></select></label>
+      <p class="hint">Get a key at console.anthropic.com → API keys, and set a monthly spend limit there. The key is kept on this phone only and is never put in shared or backup files. Each photo is sent to Claude to be read; nothing else is.</p>
+
+      <h3>Locations</h3>
+      <textarea id="s-locations" rows="6" spellcheck="false"></textarea>
+      <p class="hint">One per line. Items already using a removed location keep it.</p>
+
+      <h3>Types</h3>
+      <textarea id="s-types" rows="6" spellcheck="false"></textarea>
+      <label>Warn me this many days before expiry <input id="s-soon-days" type="number" min="0" max="14" inputmode="numeric"></label>
+
+      <h3>App</h3>
+      <p id="version-status" class="hint"></p>
+      <button type="button" class="btn block" id="update-btn">Check for updates</button>
+      <p id="storage-status" class="hint"></p>
+    </div>
+  </dialog>
+
+  <!-- A question with a few answers -->
+  <dialog id="chooser" class="alert">
+    <h2 id="chooser-title"></h2>
+    <p id="chooser-text"></p>
+    <div id="chooser-options" class="stack"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden><span id="toast-text"></span><button type="button" id="toast-action" class="btn ghost" hidden></button></div>
+</body>
+</html>
