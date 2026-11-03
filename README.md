@@ -41,8 +41,9 @@ Set your name in Settings first; the kitchen is called "*name*'s Kitchen Invento
    and set a **monthly spend limit** under *Settings → Limits*.
 2. *API keys → Create key*, copy it, and paste it in the app's *Settings → Claude API key*.
 
-Each photo costs about 1p with Claude Opus 5.5 (the default), or a fraction of a penny with
-Claude Haiku 5.5 (choose under *Model*). Only the label photo is sent, straight from the
+Each photo costs about 0.03p with Claude Haiku 5.5 (the default), or about 0.5p with
+Claude Sonnet 5.5 (choose under *Model*). If Claude can't read something, that field is left
+blank for you to fill in. Only the label photo is sent, straight from the
 phone to Anthropic. The key stays on that phone and is never put in shared or backup files.
 Without a key, everything else works and you type the details in.
 

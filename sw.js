@@ -1,7 +1,7 @@
 // Caches the app's own files so it opens with no internet connection.
 // Bump VERSION whenever any file changes so installed copies pick up the update
 // (run `python build-upload.py --bump`, which also updates the stamps below).
-const VERSION = 'kitchen-v1';
+const VERSION = 'kitchen-v2';
 const ASSETS = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/app.js', 'js/db.js', 'js/images.js', 'js/ai.js', 'js/share.js',

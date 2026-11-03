@@ -7,7 +7,7 @@ import {
 
 // Must equal VERSION in sw.js and the app-version meta tag in index.html;
 // `python build-upload.py --bump` updates all three, and the build refuses if they differ.
-const APP_VERSION = 'kitchen-v1';
+const APP_VERSION = 'kitchen-v2';
 
 const $ = (id) => document.getElementById(id);
 const DAY = 86_400_000;

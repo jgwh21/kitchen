@@ -8,12 +8,12 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2026-10-21';
 
 export const MODELS = {
-  'claude-opus-5-5': 'Claude Opus 5.5 (most accurate, about 1p a photo)',
-  'claude-haiku-5-5': 'Claude Haiku 5.5 (faster, a fraction of a penny)',
+  'claude-haiku-5-5': 'Claude Haiku 5.5 (fastest, about 0.03p a photo)',
+  'claude-sonnet-5-5': 'Claude Sonnet 5.5 (about 0.5p a photo)',
 };
-export const DEFAULT_MODEL = 'claude-opus-5-5';
-// Server-side fallback (retry on another model if a request is declined) is offered on Opus only.
-const FALLBACK_MODELS = new Set(['claude-opus-5-5']);
+export const DEFAULT_MODEL = 'claude-haiku-5-5';
+// Server-side fallback (retry on another model if a request is declined) isn't offered on Haiku.
+const FALLBACK_MODELS = new Set(['claude-sonnet-5-5']);
 
 export class AiError extends Error {}
 
